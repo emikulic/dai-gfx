@@ -7,7 +7,7 @@ def main():
   p.add_argument('outfile')
   args = p.parse_args()
 
-  f = open('tani.txt')
+  f = open(args.infile)
   d = f.readlines()
   f.close()
   h = ''
@@ -15,11 +15,22 @@ def main():
     l = l.strip()
     l = l[5:]
     h += ''.join(l.split())
+  h = h.split('4020')
+  assert len(h[0]) >= 176, len(h[0])
+  h[0] = h[0][-176:]
+  assert len(h[-1]) == 0, h[-1]
+  h = h[:-1]
 
-  h = h.split('00004020')
+  # find non-image data
+  idx = None
+  for i, l in enumerate(h):
+    if len(l) > 1000:
+      idx = i
+      break
+  assert idx is not None
 
-  for l in h:
-    print(l)
+  h = h[idx+1:] + h[:idx]
+  for l in h: print(l)
 
 if __name__ == '__main__':
   main()
