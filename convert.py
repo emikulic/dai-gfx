@@ -30,7 +30,9 @@ def main():
   assert idx is not None
 
   h = h[idx+1:] + h[:idx]
-  for l in h: print(l)
+  for l in h:
+    if len(l) == 176:
+      print(l)
 
 if __name__ == '__main__':
   main()
