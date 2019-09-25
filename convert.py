@@ -7,19 +7,19 @@ def main():
   p.add_argument('outfile')
   args = p.parse_args()
 
-f = open('tani.txt')
-d = f.readlines()
-f.close()
-h = ''
-for l in d:
-  l = l.strip()
-  l = l[5:]
-  h += ''.join(l.split())
+  f = open('tani.txt')
+  d = f.readlines()
+  f.close()
+  h = ''
+  for l in d:
+    l = l.strip()
+    l = l[5:]
+    h += ''.join(l.split())
 
-h = h.split('00004020')
+  h = h.split('00004020')
 
-for l in h:
-  print(l)
+  for l in h:
+    print(l)
 
 if __name__ == '__main__':
   main()
