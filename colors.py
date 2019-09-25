@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 import numpy as np
-import gfx
+from PIL import Image  # pip3 install pillow
+
 f = open('out')
 lines = f.readlines()
 f.close()
 
 # expecting 352 x 255
-
 img = []
 
 for l in lines:
@@ -27,7 +27,9 @@ for l in lines:
 
 img = np.asarray(img, dtype=np.uint8)
 img = img[::-1,::-1]
-print(np.max(img))
-gfx.show(img * 80)
+img *= (255//3)
+
+im = Image.fromarray(img, mode='L')
+im.save('out.png')
 
 # vim:set sw=2 ts=2 sts=2 et tw=80:
