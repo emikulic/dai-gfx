@@ -26,9 +26,12 @@ def main():
   # find non-image data
   idx = None
   for i, l in enumerate(h):
+    if len(l) != 176:
+      print(f'line {i} has weird length {len(l)}')
     if len(l) > 1000:
       idx = i
       break
+  print(f'non image data is line {idx}')
   assert idx is not None
 
   # Rotate.
@@ -39,7 +42,7 @@ def main():
 
   for i,l in enumerate(h):
     if len(l) != 176:
-      print(f'line {i} has bad length {len(l)}')
+      #print(f'line {i} has bad length {len(l)}')
       continue
 
     l = l.strip()
