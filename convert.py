@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 import argparse
+import numpy as np
+from PIL import Image  # pip3 install pillow
 
 def main():
   p = argparse.ArgumentParser()
@@ -29,21 +31,18 @@ def main():
       break
   assert idx is not None
 
+  # Rotate.
   h = h[idx+1:] + h[:idx]
-  for l in h:
-    if len(l) == 176:
-      print(l)
 
-#!/usr/bin/env python3
-import numpy as np
-from PIL import Image  # pip3 install pillow
-
-  # expecting 352 x 255
+  # Expecting 352 x 255
   img = []
 
-  for l in lines:
+  for i,l in enumerate(h):
+    if len(l) != 176:
+      print(f'line {i} has bad length {len(l)}')
+      continue
+
     l = l.strip()
-    l = l[4:]
     imgline = []
     while l:
       lb = l[:2]
@@ -62,9 +61,8 @@ from PIL import Image  # pip3 install pillow
   img *= (255//3)
 
   im = Image.fromarray(img, mode='L')
-  im.save('out.png')
+  im.save(args.outfile)
 
-# vim:set sw=2 ts=2 sts=2 et tw=80:
 if __name__ == '__main__':
   main()
 
