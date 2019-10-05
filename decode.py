@@ -10,13 +10,26 @@ def main():
   args = p.parse_args()
 
   f = open(args.infile)
-  d = f.readlines()
+  lines = f.readlines()
   f.close()
-  h = ''
-  for l in d:
-    l = l.strip()
-    l = l[5:]
-    h += ''.join(l.split())
+
+  print('info: loading hex')
+  # Example line:
+  # "BFE0 00 00 00 00 00 00 00 00 00 00 00 00 00 00 40 20
+  data = ''
+  for l in lines:
+    l = l.strip()  # Remove newline.
+    l = l.split(' ')
+    addr = l.pop(0)
+    assert len(addr) == 4, addr
+    if addr[-1] == '0': assert len(l) == 16, l
+    data += ''.join(l)
+  assert addr == 'BFE0', ('last seen addr', addr)
+  data = bytes.fromhex(data)
+  print(f'info: loaded {len(data)} hex bytes')
+
+  print(data)
+  die
   h = h.split('4020')
   assert len(h[0]) >= 176, len(h[0])
   h[0] = h[0][-176:]
