@@ -28,7 +28,53 @@ def main():
   data = bytes.fromhex(data)
   print(f'info: loaded {len(data)} hex bytes')
 
-  print(data)
+  print('info: decoding lines')
+  out = []
+  line_num = 1
+  while data:
+    # Control word, high address byte (mode byte) (manual section 3.2.1)
+    mode = data[-1]
+    # Bits:
+    # 7, 6 - display mode control
+    # 5, 4 - resolution control
+    # 3, 2, 1, 0 - line repeat count
+    line_rep = mode & 15
+    assert line_rep == 0, line_rep
+    res = (mode >> 4) & 3
+    # Res:
+    # 00 -  88 cols
+    # 01 - 176 cols
+    # 10 - 352 cols
+    # 11 - 528 cols, text mode with 66 chars per line
+    disp = (mode >> 6) & 3
+    # Disp:
+    # 00 -  4 color gfx
+    # 01 -  4 color chars
+    # 10 - 16 color gfx
+    # 11 - 16 color chars
+    # --
+    # Low address byte (color byte)
+    color = data[-2]
+    enable_change = (color >> 7) & 1
+    not_unit_color = (color >> 6) & 1
+    color_reg = (color >> 4) & 3
+    color_sel = color & 15
+    # Consume control word.
+    data = data[:-2]
+    # Determine length of line.
+    if res == 2 and disp == 0:
+      # 2 bytes = 8 cols
+      ln = 352 // 8 * 2
+    else:
+      assert False, ('unknown mode', mode, disp, res, line_rep)
+    # Consume line.
+    assert len(data) >= ln, (len(data), ln)
+    pixels = data[-ln:]
+    data = data[:-ln]
+    pixels = pixels[::-1] # Reverse.
+    print(f'line {line_num}: disp {disp} res {res} length {ln}')
+    line_num += 1
+
   die
   h = h.split('4020')
   assert len(h[0]) >= 176, len(h[0])
