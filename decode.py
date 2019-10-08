@@ -58,6 +58,10 @@ def cols_from_res(res):
   # 528 cols is also 66 chars per line in character mode.
   return [88, 176, 352, 528][res]
 
+def mul_from_res(res):
+  """Returns the width multipler based on the resolution number."""
+  return [4,2,1][res]
+
 def get_line_len(not_unit_color, disp, res, data):
   """Returns the length of the payload for this line."""
   if not not_unit_color:
@@ -165,7 +169,7 @@ def main():
     elif disp == 0 and not_unit_color == 1:
       # 4 color gfx.
       out_line = []
-      mul = [4,2,1][res] # Per-pixel width multiplier.
+      mul = mul_from_res(res)
       for i in range(0,len(pixels),2):
         # High and low are flipped because the payload is reversed.
         hb, lb = pixels[i], pixels[i+1]
@@ -175,19 +179,19 @@ def main():
           out_line.extend([PALETTE4[color]] * mul)
       assert len(out_line) == WIDTH, len(out_line)
       out.extend([out_line] * (line_rep + 1))
-    elif disp == 2 and res == 2 and not_unit_color == 1:
+    elif disp == 2 and not_unit_color == 1:
       # 16 color gfx.
       out_line = []
-      assert len(pixels) == 88
+      mul = mul_from_res(res)
       # TODO: handle previous bg color holdover
-      for i in range(0,88,2):
+      for i in range(0,len(pixels),2):
         hb, lb = pixels[i], pixels[i+1]
         bg = lb & 15
         fg = (lb >> 4) & 15
         for bit in range(7,-1,-1):
           color = bg
           if (hb >> bit) & 1: color = fg
-          out_line.append(PALETTE16[color])
+          out_line.extend([PALETTE16[color]] * mul)
       assert len(out_line) == WIDTH, len(out_line)
       out.extend([out_line] * (line_rep + 1))
     elif color == 0 and mode == 0:
@@ -204,6 +208,9 @@ def main():
     else:
       print('unimplemented')
     line_num += 1
+    if len(out) >= 260:
+      print('info: giving up after a full screen')
+      break
   print(f'info: decoded {len(out)} lines')
   if ascii_break:
     print(f'info: fixing ascii_break at image row {ascii_break}')
