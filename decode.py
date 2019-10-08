@@ -81,7 +81,8 @@ def main():
     assert len(addr) == 4, addr
     if addr[-1] == '0': assert len(l) == 16, l
     data += ''.join(l)
-  assert addr == 'BFE0', ('last seen addr', addr)
+  if addr != 'BFE1':
+    print(f'WARNING: last seen line starts at addr {addr}, expecting BFE0')
   data = bytes.fromhex(data)
   print(f'info: loaded {len(data)} hex bytes')
 
