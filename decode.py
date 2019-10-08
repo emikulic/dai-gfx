@@ -53,16 +53,25 @@ def valid_dump_line(l):
     if l[i] not in '0123456789ABCDEF': return False
   return True
 
+def cols_from_res(res):
+  """Returns the number of columns based on the resolution number."""
+  # 528 cols is also 66 chars per line in character mode.
+  return [88, 176, 352, 528][res]
+
 def get_line_len(not_unit_color, disp, res, data):
   """Returns the length of the payload for this line."""
   if not not_unit_color:
-    assert disp == 0, disp
+    #assert disp == 0, disp  # Doesn't hold in FFFF?
     #assert res == 0, res  # Doesn't hold. Why?
     return 2  # FIXME: Why?
-  elif disp in [0, 2] and res == 2:
+  elif disp in [0, 2]:
     # 2 bytes = 8 cols
-    return 352 // 8 * 2
+    return cols_from_res(res) // 8 * 2
   elif disp == 1 and res == 3:
+    # 66 text cols * 2 bytes each
+    return 66 * 2
+  elif disp == 3 and res == 3:
+    # FIXME: Guessing here!
     # 66 text cols * 2 bytes each
     return 66 * 2
   print('Unknown mode, trailing data is:')
@@ -181,6 +190,9 @@ def main():
       assert len(out_line) == WIDTH, len(out_line)
       out.extend([out_line] * (line_rep + 1))
     elif color == 0 and mode == 0:
+      # Probably unused memory: skip it.
+      pass
+    elif color == 0xff and mode == 0xff:
       # Probably unused memory: skip it.
       pass
     elif line_num == 213 and mode == 0x30 and color == 0x88 and \
