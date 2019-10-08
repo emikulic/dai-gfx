@@ -46,6 +46,7 @@ def cut(b, l):
 assert cut(b'hello', 3) == (b'he', b'llo')
 
 def valid_dump_line(l):
+  """Returns True if `l` looks like a valid UT hex dump line."""
   if len(l) < 5: return False
   if l[4] != ' ': return False
   for i in range(4):
@@ -53,6 +54,7 @@ def valid_dump_line(l):
   return True
 
 def get_line_len(not_unit_color, disp, res, data):
+  """Returns the length of the payload for this line."""
   if not not_unit_color:
     assert disp == 0, disp
     #assert res == 0, res  # Doesn't hold. Why?
