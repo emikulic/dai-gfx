@@ -40,8 +40,10 @@ def get_line_len(not_unit_color, disp, res):
 def main():
   p = argparse.ArgumentParser()
   p.add_argument('infile')
-  p.add_argument('outfile')
+  p.add_argument('-outfile')
   args = p.parse_args()
+  if args.outfile is None:
+    args.outfile = args.infile + '.png'
 
   f = open(args.infile)
   lines = f.readlines()
@@ -138,55 +140,7 @@ def main():
   img = np.asarray(out, dtype=np.uint8)
   print(img.shape)
   im = Image.fromarray(img)#, mode='L')
-  im.save(args.outfile)
-  die
-  h = h.split('4020')
-  assert len(h[0]) >= 176, len(h[0])
-  h[0] = h[0][-176:]
-  assert len(h[-1]) == 0, h[-1]
-  h = h[:-1]
-
-  # find non-image data
-  idx = None
-  for i, l in enumerate(h):
-    if len(l) != 176:
-      print(f'line {i} has weird length {len(l)}')
-    if len(l) > 1000:
-      idx = i
-      break
-  print(f'non image data is line {idx}')
-  assert idx is not None
-
-  # Rotate.
-  h = h[idx+1:] + h[:idx]
-
-  # Expecting 352 x 255
-  img = []
-
-  for i,l in enumerate(h):
-    if len(l) != 176:
-      #print(f'line {i} has bad length {len(l)}')
-      continue
-
-    l = l.strip()
-    imgline = []
-    while l:
-      lb = l[:2]
-      hb = l[2:4]
-      l = l[4:]
-      lb = ord(bytes.fromhex(lb))
-      hb = ord(bytes.fromhex(hb))
-      for i in range(8):
-        color = ((lb >> i) & 1)
-        color |= ((hb >> i) & 1) * 2
-        imgline.append(color)
-    img.append(imgline)
-
-  img = np.asarray(img, dtype=np.uint8)
-  img = img[::-1,::-1]
-  img *= (255//3)
-
-  im = Image.fromarray(img, mode='L')
+  print(f'writing image to {args.outfile}')
   im.save(args.outfile)
 
 if __name__ == '__main__':
