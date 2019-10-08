@@ -52,10 +52,12 @@ def valid_dump_line(l):
     if l[i] not in '0123456789ABCDEF': return False
   return True
 
-def get_line_len(not_unit_color, disp, res):
+def get_line_len(not_unit_color, disp, res, data):
   if not not_unit_color:
+    assert disp == 0, disp
+    #assert res == 0, res  # Doesn't hold. Why?
     return 2  # FIXME: Why?
-  elif disp == 0 and res == 2:
+  elif disp in [0, 2] and res == 2:
     # 2 bytes = 8 cols
     return 352 // 8 * 2
   elif disp == 1 and res == 3:
@@ -129,13 +131,13 @@ def main():
     color_reg = (color >> 4) & 3
     color_sel = color & 15
 
-    line_len = get_line_len(not_unit_color, disp, res)
     print(f'line {line_num:3} mode {mode:02x} disp {disp} res {res} '
         f'rep {line_rep} '
         f'| color {color:02x} change {enable_change} '
         f'not_unit {not_unit_color} reg {color_reg} '
-        f'sel {color_sel} '
-        f'| len {line_len}')
+        f'sel {color_sel} ', end='')
+    line_len = get_line_len(not_unit_color, disp, res, data)
+    print(f'| len {line_len}')
     assert line_len is not None
 
     # Consume line.
@@ -148,14 +150,31 @@ def main():
       text = pixels[0::2]
       print(' Text:', repr(text))
     elif disp == 0 and res == 2 and not_unit_color == 1:
+      # 4 color gfx.
       out_line = []
       assert len(pixels) == 88
       for i in range(0,88,2):
+        # High and low are flipped because the payload is reversed.
         hb, lb = pixels[i], pixels[i+1]
         for bit in range(7,-1,-1):
           color = ((lb >> bit) & 1)
           color |= ((hb >> bit) & 1) * 2
           out_line.append(PALETTE4[color])
+      assert len(out_line) == WIDTH, len(out_line)
+      out.extend([out_line] * (line_rep + 1))
+    elif disp == 2 and res == 2 and not_unit_color == 1:
+      # 16 color gfx.
+      out_line = []
+      assert len(pixels) == 88
+      # TODO: handle previous bg color holdover
+      for i in range(0,88,2):
+        hb, lb = pixels[i], pixels[i+1]
+        bg = lb & 15
+        fg = (lb >> 4) & 15
+        for bit in range(7,-1,-1):
+          color = bg
+          if (hb >> bit) & 1: color = fg
+          out_line.append(PALETTE16[color])
       assert len(out_line) == WIDTH, len(out_line)
       out.extend([out_line] * (line_rep + 1))
     elif color == 0 and mode == 0:
