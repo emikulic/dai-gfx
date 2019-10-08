@@ -45,6 +45,13 @@ def cut(b, l):
 
 assert cut(b'hello', 3) == (b'he', b'llo')
 
+def valid_dump_line(l):
+  if len(l) < 5: return False
+  if l[4] != ' ': return False
+  for i in range(4):
+    if l[i] not in '0123456789ABCDEF': return False
+  return True
+
 def get_line_len(not_unit_color, disp, res):
   if not not_unit_color:
     return 2  # FIXME: Why?
@@ -76,12 +83,15 @@ def main():
   data = ''
   for l in lines:
     l = l.strip()  # Remove newline.
+    if not valid_dump_line(l):
+      print('ignoring line', repr(l))
+      continue
     l = l.split(' ')
     addr = l.pop(0)
     assert len(addr) == 4, addr
     if addr[-1] == '0': assert len(l) == 16, l
     data += ''.join(l)
-  if addr != 'BFE1':
+  if addr != 'BFE0':
     print(f'WARNING: last seen line starts at addr {addr}, expecting BFE0')
   data = bytes.fromhex(data)
   print(f'info: loaded {len(data)} hex bytes')
@@ -120,11 +130,11 @@ def main():
     color_sel = color & 15
 
     line_len = get_line_len(not_unit_color, disp, res)
-    print(f'line {line_num}: control {data[-2:].hex()} '
-        f'| color {color:02x} enable_change {enable_change} '
-        f'not_unit_color {not_unit_color} color_reg {color_reg} '
-        f'color_sel {color_sel} '
-        f'| mode {mode:02x} disp {disp} res {res} line_rep {line_rep} '
+    print(f'line {line_num:3} mode {mode:02x} disp {disp} res {res} '
+        f'rep {line_rep} '
+        f'| color {color:02x} change {enable_change} '
+        f'not_unit {not_unit_color} reg {color_reg} '
+        f'sel {color_sel} '
         f'| len {line_len}')
     assert line_len is not None
 
