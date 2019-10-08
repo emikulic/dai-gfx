@@ -3,6 +3,20 @@ import argparse
 import numpy as np
 from PIL import Image  # pip3 install pillow
 
+WIDTH = 352
+
+# Palette for 4 color gfx.
+G0 = 10
+G1 = 50
+G2 = 100
+G3 = 200
+PALETTE4 = [
+    [G0,G0,G0],
+    [G1,G1,G1],
+    [G2,G2,G2],
+    [G3,G3,G3],
+]
+
 def cut(b, l):
   """Cut the last `l` bytes from `b`, returns the left and right parts."""
   assert len(b) >= l, (len(b), l)
@@ -93,14 +107,38 @@ def main():
     # Consume line.
     data, pixels = cut(data, line_len)
     pixels = pixels[::-1] # Reverse.
-    line_num += 1
 
+    # Convert to image.
     if mode == 0x7a:
-      # Decode text.
+      # Decode text but just log it.
       text = pixels[0::2]
       print(' Text:', repr(text))
+    elif disp == 0 and res == 2 and not_unit_color == 1:
+      assert line_rep == 0  # TODO
+      out_line = []
+      assert len(pixels) == 88
+      for i in range(0,88,2):
+        hb, lb = pixels[i], pixels[i+1]
+        for bit in range(7,-1,-1):
+          color = ((lb >> bit) & 1)
+          color |= ((hb >> bit) & 1) * 2
+          out_line.append(PALETTE4[color])
+      assert len(out_line) == WIDTH, len(out_line)
+      out.append(out_line)
+    elif color == 0 and mode == 0:
+      # Probably unused memory: skip it.
+      pass
+    else:
+      print('unimplemented')
 
+    line_num += 1
     # TODO: deal with line rep
+
+  print(f'decoded {len(out)} lines')
+  img = np.asarray(out, dtype=np.uint8)
+  print(img.shape)
+  im = Image.fromarray(img)#, mode='L')
+  im.save(args.outfile)
   die
   h = h.split('4020')
   assert len(h[0]) >= 176, len(h[0])
