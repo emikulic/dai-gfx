@@ -112,7 +112,7 @@ def main():
   print('info: decoding lines')
   out = []
   ascii_break = None
-  line_num = 1
+  line_num = 0
   while data:
     # Control word, high address byte (mode byte) (manual section 3.2.1)
     data, mode = cut(data, 1)
@@ -143,7 +143,8 @@ def main():
     color_reg = (color >> 4) & 3
     color_sel = color & 15
 
-    print(f'line {line_num:3} mode {mode:02x} disp {disp} res {res} '
+    print(f'line {line_num:3} row {len(out):3} '
+        f'mode {mode:02x} disp {disp} res {res} '
         f'rep {line_rep} '
         f'| color {color:02x} change {enable_change} '
         f'not_unit {not_unit_color} reg {color_reg} '
@@ -161,17 +162,17 @@ def main():
       # Decode text but just log it.
       text = pixels[0::2]
       print(' Text:', repr(text))
-    elif disp == 0 and res == 2 and not_unit_color == 1:
+    elif disp == 0 and not_unit_color == 1:
       # 4 color gfx.
       out_line = []
-      assert len(pixels) == 88
-      for i in range(0,88,2):
+      mul = [4,2,1][res] # Per-pixel width multiplier.
+      for i in range(0,len(pixels),2):
         # High and low are flipped because the payload is reversed.
         hb, lb = pixels[i], pixels[i+1]
         for bit in range(7,-1,-1):
           color = ((lb >> bit) & 1)
           color |= ((hb >> bit) & 1) * 2
-          out_line.append(PALETTE4[color])
+          out_line.extend([PALETTE4[color]] * mul)
       assert len(out_line) == WIDTH, len(out_line)
       out.extend([out_line] * (line_rep + 1))
     elif disp == 2 and res == 2 and not_unit_color == 1:
@@ -195,7 +196,7 @@ def main():
     elif color == 0xff and mode == 0xff:
       # Probably unused memory: skip it.
       pass
-    elif line_num == 213 and mode == 0x30 and color == 0x88 and \
+    elif line_num in [212, 106] and mode == 0x30 and color == 0x88 and \
         ascii_break is None:
       # Maybe too brittle.
       print(f'info: decided ascii break starts on line {line_num} '
