@@ -116,7 +116,6 @@ def main():
       text = pixels[0::2]
       print(' Text:', repr(text))
     elif disp == 0 and res == 2 and not_unit_color == 1:
-      assert line_rep == 0  # TODO
       out_line = []
       assert len(pixels) == 88
       for i in range(0,88,2):
@@ -126,7 +125,7 @@ def main():
           color |= ((hb >> bit) & 1) * 2
           out_line.append(PALETTE4[color])
       assert len(out_line) == WIDTH, len(out_line)
-      out.append(out_line)
+      out.extend([out_line] * (line_rep + 1))
     elif color == 0 and mode == 0:
       # Probably unused memory: skip it.
       pass
@@ -134,7 +133,6 @@ def main():
       print('unimplemented')
 
     line_num += 1
-    # TODO: deal with line rep
 
   print(f'decoded {len(out)} lines')
   img = np.asarray(out, dtype=np.uint8)
