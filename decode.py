@@ -95,6 +95,11 @@ def main():
     pixels = pixels[::-1] # Reverse.
     line_num += 1
 
+    if mode == 0x7a:
+      # Decode text.
+      text = pixels[0::2]
+      print(' Text:', repr(text))
+
     # TODO: deal with line rep
   die
   h = h.split('4020')
