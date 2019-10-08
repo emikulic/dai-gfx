@@ -196,9 +196,8 @@ def main():
     elif color == 0xff and mode == 0xff:
       # Probably unused memory: skip it.
       pass
-    elif line_num in [212, 106] and mode == 0x30 and color == 0x88 and \
+    elif len(out) == 212 and mode == 0x30 and color == 0x88 and \
         ascii_break is None:
-      # Maybe too brittle.
       print(f'info: decided ascii break starts on line {line_num} '
           f'after {len(out)} image rows')
       ascii_break = len(out)
@@ -208,7 +207,7 @@ def main():
   print(f'info: decoded {len(out)} lines')
   if ascii_break:
     print(f'info: fixing ascii_break at image row {ascii_break}')
-    out = out[ascii_break:] + out[:ascii_break]
+    out = out[ascii_break:260] + out[:ascii_break]
   img = np.asarray(out, dtype=np.uint8)
   print(img.shape)
   im = Image.fromarray(img)#, mode='L')
