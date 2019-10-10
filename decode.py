@@ -5,18 +5,6 @@ from PIL import Image  # pip3 install pillow
 
 WIDTH = 352
 
-# Palette for 4 color gfx.
-G0 = 10
-G1 = 50
-G2 = 100
-G3 = 200
-PALETTE4 = [
-    [G0,G0,G0],
-    [G1,G1,G1],
-    [G2,G2,G2],
-    [G3,G3,G3],
-]
-
 # Palette for 16 color gfx.
 # Taken from src/mame/video/dai.cpp
 PALETTE16 = [
@@ -118,6 +106,7 @@ def main():
   ascii_break = None
   line_num = 0
   prev_bg = 0  # Used in 16 color gfx mode.
+  color_regs = [1, 9, 12, 15]  # Used in 4 color gfx mode. (blues)
   while data:
     # Control word, high address byte (mode byte) (manual section 3.2.1)
     data, mode = cut(data, 1)
@@ -167,6 +156,21 @@ def main():
       # Decode text but just log it.
       text = pixels[0::2]
       print(' Text:', repr(text))
+    elif len(out) == 212 and mode == 0x30 and color == 0x88 and \
+        ascii_break is None:
+      print(f'info: decided ascii break starts on line {line_num} '
+          f'after {len(out)} image rows')
+      ascii_break = len(out)
+    elif enable_change == 1:
+      assert disp == 0
+      assert res == 3
+      assert not_unit_color == 0
+      assert pixels == b'\x00\x00', pixels
+      # rep varies - why?
+      if ascii_break:
+        print(' ignored color change')
+      else:
+        color_regs[color_reg] = color_sel
     elif disp == 0 and not_unit_color == 1:
       # 4 color gfx.
       out_line = []
@@ -177,7 +181,7 @@ def main():
         for bit in range(7,-1,-1):
           color = ((lb >> bit) & 1)
           color |= ((hb >> bit) & 1) * 2
-          out_line.extend([PALETTE4[color]] * mul)
+          out_line.extend([PALETTE16[color_regs[color]]] * mul)
       assert len(out_line) == WIDTH, len(out_line)
       out.extend([out_line] * (line_rep + 1))
     elif disp == 2 and not_unit_color == 1:
@@ -207,13 +211,8 @@ def main():
     elif color == 0xff and mode == 0xff:
       # Probably unused memory: skip it.
       pass
-    elif len(out) == 212 and mode == 0x30 and color == 0x88 and \
-        ascii_break is None:
-      print(f'info: decided ascii break starts on line {line_num} '
-          f'after {len(out)} image rows')
-      ascii_break = len(out)
     else:
-      print('unimplemented')
+      print(' unimplemented')
     line_num += 1
     if len(out) >= 260:
       print('info: giving up after a full screen')
