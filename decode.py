@@ -84,7 +84,7 @@ def main():
 
   print('info: loading hex')
   # Example line:
-  # "BFE0 00 00 00 00 00 00 00 00 00 00 00 00 00 00 40 20
+  # 'BFF0 00 00 B8 36 00 00 AF 36 00 00 9F 36 00 00 80 36'
   data = ''
   for l in lines:
     l = l.strip()  # Remove newline.
@@ -96,8 +96,9 @@ def main():
     assert len(addr) == 4, addr
     if addr[-1] == '0': assert len(l) == 16, l
     data += ''.join(l)
-  if addr != 'BFE0':
-    print(f'WARNING: last seen line starts at addr {addr}, expecting BFE0')
+  exp_last = 'BFF0'
+  if addr != exp_last:
+    print(f'WARN: last seen line starts at addr {addr}, expecting {exp_last}')
   data = bytes.fromhex(data)
   print(f'info: loaded {len(data)} hex bytes')
 
