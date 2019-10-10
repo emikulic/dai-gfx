@@ -59,7 +59,7 @@ def cols_from_res(res):
   return [88, 176, 352, 528][res]
 
 def mul_from_res(res):
-  """Returns the width multipler based on the resolution number."""
+  """Returns the width multiplier based on the resolution number."""
   return [4,2,1][res]
 
 def get_line_len(not_unit_color, disp, res, data):
@@ -117,6 +117,7 @@ def main():
   out = []
   ascii_break = None
   line_num = 0
+  prev_bg = 0  # Used in 16 color gfx mode.
   while data:
     # Control word, high address byte (mode byte) (manual section 3.2.1)
     data, mode = cut(data, 1)
@@ -183,15 +184,24 @@ def main():
       # 16 color gfx.
       out_line = []
       mul = mul_from_res(res)
-      # TODO: handle previous bg color holdover
+      seen_1 = False
       for i in range(0,len(pixels),2):
         hb, lb = pixels[i], pixels[i+1]
         bg = lb & 15
         fg = (lb >> 4) & 15
         for bit in range(7,-1,-1):
-          color = bg
-          if (hb >> bit) & 1: color = fg
+          color = prev_bg
+          if seen_1:
+            color = bg
+          if (hb >> bit) & 1:
+            color = fg
+            seen_1 = True
+            prev_bg = bg
+          else:
+            if not seen_1:
+              print(f'holdover {prev_bg} vs {bg}')
           out_line.extend([PALETTE16[color]] * mul)
+        #prev_bg = bg
       assert len(out_line) == WIDTH, len(out_line)
       out.extend([out_line] * (line_rep + 1))
     elif color == 0 and mode == 0:
