@@ -26,6 +26,40 @@ PALETTE16 = [
     [0xff, 0xff, 0xff],  # 15 White
 ]
 
+def to_float(img, gamma=2.2):
+  """Converts [0-255] to [0-1] with gamma conversion."""
+  out = img.astype(np.float) / 255.
+  if gamma != 1.0:
+    out = np.power(out, gamma)
+  return out
+
+def from_float(img, gamma=2.2):
+  out = np.power(img.astype(np.float), 1.0 / gamma)
+  out = (out * 255).clip(0, 255)
+  # Rounding reduces quantization error (compared to just truncating)
+  return np.round(out).astype(np.uint8)
+
+def adjust_pal(pal):
+  """
+  Adjusts the given palette so that luminance is a gradient.
+  """
+  pal_rgb = np.asarray(pal)
+  pal_rgb = to_float(pal_rgb)  # Linear rgb.
+
+  # YUV constants for Rec.709
+  wr = 0.2126
+  wg = 0.7152
+  wb = 0.0722
+
+  y = pal_rgb.dot([wr, wg, wb])
+
+  for i in range(16):
+    lum = i / 15
+    lum = np.power(lum, 2.2)
+    pal_rgb[i] = pal_rgb[i] / y[i] * lum
+
+  return from_float(pal_rgb)
+
 def cut(b, l):
   """Cut the last `l` bytes from `b`, returns the left and right parts."""
   assert len(b) >= l, (len(b), l)
@@ -74,9 +108,21 @@ def main():
   p = argparse.ArgumentParser()
   p.add_argument('infile')
   p.add_argument('-outfile')
+  p.add_argument('-pal', default='mame',
+      help='palette choice: mame|adjust|gray')
   args = p.parse_args()
   if args.outfile is None:
     args.outfile = args.infile + '.png'
+  if args.pal == 'mame':
+    pal = PALETTE16
+  elif args.pal == 'adjust':
+    pal = adjust_pal(PALETTE16)
+  elif args.pal == 'gray':
+    pal = [[n,n,n] for n in range(0, 256, 16)]
+    print(pal)
+    assert len(pal) == 16
+  else:
+    assert False, ('unknown palette', args.pal)
 
   f = open(args.infile)
   lines = f.readlines()
@@ -182,7 +228,7 @@ def main():
         for bit in range(7,-1,-1):
           color = ((lb >> bit) & 1)
           color |= ((hb >> bit) & 1) * 2
-          out_line.extend([PALETTE16[color_regs[color]]] * mul)
+          out_line.extend([pal[color_regs[color]]] * mul)
       assert len(out_line) == WIDTH, len(out_line)
       out.extend([out_line] * (line_rep + 1))
     elif disp == 2 and not_unit_color == 1:
@@ -202,7 +248,7 @@ def main():
             if prev_bg != bg:
               print(f' col {len(out_line)} '
                 f'holding prev bg color {prev_bg} vs {bg}')
-          out_line.extend([PALETTE16[color]] * mul)
+          out_line.extend([pal[color]] * mul)
         #prev_bg = bg
       assert len(out_line) == WIDTH, len(out_line)
       out.extend([out_line] * (line_rep + 1))
