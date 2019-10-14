@@ -218,7 +218,9 @@ def main():
         #assert pixels == b'\x00\x00', pixels
         # rep varies - why?
         if ascii_break:
-          print(' ignored color change')
+          print(' ignored color change due to ascii break')
+        #elif not_unit_color == 1:
+        #  print(' ignored color change due to unit color')
         else:
           color_regs[color_reg] = color_sel
           print(f' set color register {color_reg} to color {color_sel}')
