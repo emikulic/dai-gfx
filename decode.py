@@ -144,6 +144,11 @@ def main():
     print(f'WARN: last seen line starts at addr {addr}, expecting {exp_last}')
   data = bytes.fromhex(data)
   print(f'info: loaded {len(data)} hex bytes')
+  binfn = args.infile + '.bin'
+  print(f'info: writing binary data to {binfn}')
+  f = open(binfn, 'wb')
+  f.write(data)
+  f.close()
 
   print('info: decoding lines')
   out = []
