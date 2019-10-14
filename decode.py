@@ -210,62 +210,68 @@ def main():
       print(f'info: decided ascii break starts on line {line_num} '
           f'after {len(out)} image rows')
       ascii_break = len(out)
-    elif enable_change == 1:
-      assert disp == 0
-      assert res == 3
-      assert not_unit_color == 0
-      assert pixels == b'\x00\x00', pixels
-      # rep varies - why?
-      if ascii_break:
-        print(' ignored color change')
-      else:
-        color_regs[color_reg] = color_sel
-    elif disp == 0 and not_unit_color == 1:
-      # 4 color gfx.
-      out_line = []
-      mul = mul_from_res(res)
-      for i in range(0,len(pixels),2):
-        # High and low are flipped because the payload is reversed.
-        hb, lb = pixels[i], pixels[i+1]
-        for bit in range(7,-1,-1):
-          color = ((lb >> bit) & 1)
-          color |= ((hb >> bit) & 1) * 2
-          out_line.extend([pal[color_regs[color]]] * mul)
-      assert len(out_line) == WIDTH, len(out_line)
-      out.extend([out_line] * (line_rep + 1))
-    elif disp == 2 and not_unit_color == 1:
-      # 16 color gfx.
-      out_line = []
-      mul = mul_from_res(res)
-      for i in range(0,len(pixels),2):
-        hb, lb = pixels[i], pixels[i+1]
-        bg = lb & 15
-        fg = (lb >> 4) & 15
-        for bit in range(7,-1,-1):
-          color = prev_bg
-          if (hb >> bit) & 1:
-            color = fg
-            prev_bg = bg
-          else:
-            if prev_bg != bg:
-              print(f' col {len(out_line)} '
-                f'holding prev bg color {prev_bg} vs {bg}')
-          out_line.extend([pal[color]] * mul)
-        #prev_bg = bg
-      assert len(out_line) == WIDTH, len(out_line)
-      out.extend([out_line] * (line_rep + 1))
-    elif color == 0 and mode == 0:
-      # Probably unused memory: skip it.
-      pass
-    elif color == 0xff and mode == 0xff:
-      # Probably unused memory: skip it.
-      pass
     else:
-      print(' unimplemented')
+      if enable_change == 1:
+        assert disp == 0
+        #assert res == 3  # Doesn't hold.
+        #assert not_unit_color == 0  # Doesn't hold.
+        #assert pixels == b'\x00\x00', pixels
+        # rep varies - why?
+        if ascii_break:
+          print(' ignored color change')
+        else:
+          color_regs[color_reg] = color_sel
+          print(f' set color register {color_reg} to color {color_sel}')
+      if disp == 0 and not_unit_color == 1:
+        # 4 color gfx.
+        out_line = []
+        mul = mul_from_res(res)
+        for i in range(0,len(pixels),2):
+          # High and low are flipped because the payload is reversed.
+          hb, lb = pixels[i], pixels[i+1]
+          for bit in range(7,-1,-1):
+            color = ((lb >> bit) & 1)
+            color |= ((hb >> bit) & 1) * 2
+            out_line.extend([pal[color_regs[color]]] * mul)
+        assert len(out_line) == WIDTH, len(out_line)
+        out.extend([out_line] * (line_rep + 1))
+      elif disp == 2 and not_unit_color == 1:
+        # 16 color gfx.
+        out_line = []
+        mul = mul_from_res(res)
+        for i in range(0,len(pixels),2):
+          hb, lb = pixels[i], pixels[i+1]
+          bg = lb & 15
+          fg = (lb >> 4) & 15
+          for bit in range(7,-1,-1):
+            color = prev_bg
+            if (hb >> bit) & 1:
+              color = fg
+              prev_bg = bg
+            else:
+              if prev_bg != bg:
+                print(f' col {len(out_line)} '
+                  f'holding prev bg color {prev_bg} vs {bg}')
+            out_line.extend([pal[color]] * mul)
+          #prev_bg = bg
+        assert len(out_line) == WIDTH, len(out_line)
+        out.extend([out_line] * (line_rep + 1))
+      elif color == 0 and mode == 0:
+        # Probably unused memory: skip it.
+        pass
+      elif color == 0xff and mode == 0xff:
+        # Probably unused memory: skip it.
+        pass
+      elif not_unit_color == 0 and pixels == b'\x00\x00':
+        # Skip no-op?
+        pass
+      else:
+        print(' unimplemented')
     line_num += 1
     if len(out) >= 260:
       print('info: giving up after a full screen')
       break
+
   print(f'info: decoded {len(out)} lines')
   if ascii_break:
     print(f'info: fixing ascii_break at image row {ascii_break}')
