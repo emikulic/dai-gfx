@@ -107,12 +107,9 @@ def get_line_len(not_unit_color, disp, res, data):
 def main():
   p = argparse.ArgumentParser()
   p.add_argument('infile')
-  p.add_argument('-outfile')
   p.add_argument('-pal', default='mame',
       help='palette choice: mame|adjust|gray')
   args = p.parse_args()
-  if args.outfile is None:
-    args.outfile = args.infile + '.png'
   if args.pal == 'mame':
     pal = PALETTE16
   elif args.pal == 'adjust':
@@ -271,8 +268,9 @@ def main():
   img = np.asarray(out, dtype=np.uint8)
   print(img.shape)
   im = Image.fromarray(img)#, mode='L')
-  print(f'info: writing image to {args.outfile}')
-  im.save(args.outfile)
+  outfn = args.infile + '.png'
+  print(f'info: writing image to {outfn}')
+  im.save(outfn)
 
 if __name__ == '__main__':
   main()
