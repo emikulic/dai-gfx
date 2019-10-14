@@ -197,6 +197,9 @@ def main():
     assert line_len is not None
 
     # Consume line.
+    if line_len > len(data):
+      print(f'warn: giving up because not enough data left ({len(data)} bytes)')
+      break
     data, pixels = cut(data, line_len)
     pixels = pixels[::-1] # Reverse.
 
@@ -212,7 +215,7 @@ def main():
       ascii_break = len(out)
     else:
       if enable_change == 1:
-        assert disp == 0
+        #assert disp == 0  # Doesn't hold.
         #assert res == 3  # Doesn't hold.
         #assert not_unit_color == 0  # Doesn't hold.
         #assert pixels == b'\x00\x00', pixels
@@ -264,8 +267,8 @@ def main():
       elif color == 0xff and mode == 0xff:
         # Probably unused memory: skip it.
         pass
-      elif not_unit_color == 0 and pixels == b'\x00\x00':
-        # Skip no-op?
+      elif not_unit_color == 0:
+        print(f' ignoring data {repr(pixels)} due to unit_color')
         pass
       else:
         print(' unimplemented')
