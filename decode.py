@@ -26,6 +26,10 @@ PALETTE16 = [
     [0xff, 0xff, 0xff],  # 15 White
 ]
 
+PALETTE_GRAY = [[n,n,n] for n in range(0, 256, 16)]
+assert len(PALETTE_GRAY) == 16
+PALETTE_GRAY = np.asarray(PALETTE_GRAY, dtype=np.uint8)
+
 def to_float(img, gamma=2.2):
   """Converts [0-255] to [0-1] with gamma conversion."""
   out = img.astype(np.float) / 255.
@@ -133,16 +137,12 @@ def main():
   p = argparse.ArgumentParser()
   p.add_argument('infile')
   p.add_argument('-pal', default='mame',
-      help='palette choice: mame|adjust|gray')
+      help='palette choice: mame|adjust')
   args = p.parse_args()
   if args.pal == 'mame':
     pal = PALETTE16
   elif args.pal == 'adjust':
     pal = adjust_pal(PALETTE16)
-  elif args.pal == 'gray':
-    pal = [[n,n,n] for n in range(0, 256, 16)]
-    print(pal)
-    assert len(pal) == 16
   else:
     assert False, ('unknown palette', args.pal)
 
@@ -158,7 +158,6 @@ def main():
     print(f'WARN: last seen line starts at addr {last_addr:04x}, '
         f'expecting {exp_last:04x}')
 
-  # Write binary data to file.
   binfn = fn + '.bin'
   print(f'info: writing binary data to {binfn}')
   f = open(binfn, 'wb')
@@ -168,6 +167,7 @@ def main():
   print('info: decoding lines')
   addr = last_addr
   out = []
+  out_gray = []
   ascii_break = None
   line_num = 0
   prev_bg = 0  # Used in 16 color gfx mode.
@@ -222,7 +222,7 @@ def main():
 
     # Convert to image.
     if mode == 0x7a:
-      # Decode text but just log it.
+      # Log text, don't add it to the image.
       text = pixels[0::2]
       print(' Text:', repr(text))
     elif len(out) == 212 and mode == 0x30 and color == 0x88 and \
@@ -232,15 +232,9 @@ def main():
       ascii_break = len(out)
     else:
       if enable_change == 1:
-        #assert disp == 0  # Doesn't hold.
-        #assert res == 3  # Doesn't hold.
-        #assert not_unit_color == 0  # Doesn't hold.
-        #assert pixels == b'\x00\x00', pixels
         # rep varies - why?
         if ascii_break:
           print(' ignored color change due to ascii break')
-        #elif not_unit_color == 1:
-        #  print(' ignored color change due to unit color')
         else:
           color_regs[color_reg] = color_sel
           print(f' set color register {color_reg} to color {color_sel}')
@@ -254,7 +248,7 @@ def main():
           for bit in range(7,-1,-1):
             color = ((lb >> bit) & 1)
             color |= ((hb >> bit) & 1) * 2
-            out_line.extend([pal[color_regs[color]]] * mul)
+            out_line.extend([color_regs[color]] * mul)
         assert len(out_line) == WIDTH, len(out_line)
         out.extend([out_line] * (line_rep + 1))
       elif disp == 2 and not_unit_color == 1:
@@ -274,8 +268,7 @@ def main():
               if prev_bg != bg:
                 print(f' col {len(out_line)} '
                   f'holding prev bg color {prev_bg} vs {bg}')
-            out_line.extend([pal[color]] * mul)
-          #prev_bg = bg
+            out_line.extend([color] * mul)
         assert len(out_line) == WIDTH, len(out_line)
         out.extend([out_line] * (line_rep + 1))
       elif color == 0 and mode == 0:
@@ -300,11 +293,23 @@ def main():
     #marker = [[[255,0,0]] * WIDTH]
     marker = []
     out = out[ascii_break:260] + marker + out[:ascii_break]
-  img = np.asarray(out, dtype=np.uint8)
-  print(img.shape)
-  im = Image.fromarray(img)#, mode='L')
+
+  # Apply palette.
+  out = np.asarray(out)
+  pal = np.asarray(pal, dtype=np.uint8)
+  img = pal[out]
+  h,w,c = img.shape
+  print(f'info: output image res is {w} x {h}')
+  im = Image.fromarray(img)
   outfn = fn + '.png'
   print(f'info: writing image to {outfn}')
+  im.save(outfn)
+
+  # Generate grayscale version.
+  img = PALETTE_GRAY[out]
+  im = Image.fromarray(img)
+  outfn = fn + '.gray.png'
+  print(f'info: writing grayscale image to {outfn}')
   im.save(outfn)
 
 if __name__ == '__main__':
