@@ -121,14 +121,16 @@ def main():
   else:
     assert False, ('unknown palette', args.pal)
 
-  f = open(args.infile)
+  fn = args.infile
+  print('info: loading hex from {fn}')
+  f = open(fn)
   lines = f.readlines()
   f.close()
 
-  print('info: loading hex')
   # Example line:
   # 'BFF0 00 00 B8 36 00 00 AF 36 00 00 9F 36 00 00 80 36'
   data = ''
+  last_addr = 0
   for l in lines:
     l = l.strip()  # Remove newline.
     if not valid_dump_line(l):
@@ -137,20 +139,27 @@ def main():
     l = l.split(' ')
     addr = l.pop(0)
     assert len(addr) == 4, addr
-    if addr[-1] == '0': assert len(l) == 16, l
+    if addr[-1] == '0':
+      # Expect a full line (16 bytes).
+      assert len(l) == 16, l
+    last_addr = int(addr, 16) + len(l) - 1
     data += ''.join(l)
-  exp_last = 'BFF0'
-  if addr != exp_last:
-    print(f'WARN: last seen line starts at addr {addr}, expecting {exp_last}')
+  exp_last = 0xBFFF
+  if last_addr != exp_last:
+    print(f'WARN: last seen line starts at addr {last_addr:04x}, '
+        f'expecting {exp_last:04x}')
   data = bytes.fromhex(data)
   print(f'info: loaded {len(data)} hex bytes')
-  binfn = args.infile + '.bin'
+
+  # Write binary data to file.
+  binfn = fn + '.bin'
   print(f'info: writing binary data to {binfn}')
   f = open(binfn, 'wb')
   f.write(data)
   f.close()
 
   print('info: decoding lines')
+  addr = last_addr
   out = []
   ascii_break = None
   line_num = 0
@@ -186,15 +195,16 @@ def main():
     color_reg = (color >> 4) & 3
     color_sel = color & 15
 
-    print(f'line {line_num:3} row {len(out):3} '
-        f'mode {mode:02x} disp {disp} res {res} '
+    print(f'addr 0x{addr:04X} insn {line_num:3} row {len(out):3} '
+        f'mode 0x{mode:02x} disp {disp} res {res} '
         f'rep {line_rep} '
-        f'| color {color:02x} change {enable_change} '
+        f'| color 0x{color:02x} change {enable_change} '
         f'not_unit {not_unit_color} reg {color_reg} '
         f'sel {color_sel} ', end='')
     line_len = get_line_len(not_unit_color, disp, res, data)
     print(f'| len {line_len}')
     assert line_len is not None
+    addr -= line_len + 2
 
     # Consume line.
     if line_len > len(data):
@@ -286,7 +296,7 @@ def main():
   img = np.asarray(out, dtype=np.uint8)
   print(img.shape)
   im = Image.fromarray(img)#, mode='L')
-  outfn = args.infile + '.png'
+  outfn = fn + '.png'
   print(f'info: writing image to {outfn}')
   im.save(outfn)
 
