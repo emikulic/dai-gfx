@@ -262,8 +262,8 @@ def main():
         assert len(out_line) == WIDTH, len(out_line)
         out.extend([out_line] * (line_rep + 1))
       elif color == 0 and mode == 0:
-        # Probably unused memory: skip it.
-        pass
+        print(f' looks like uninitialized memory, stop decoding')
+        break
       elif color == 0xff and mode == 0xff:
         # Probably unused memory: skip it.
         pass
@@ -280,7 +280,9 @@ def main():
   print(f'info: decoded {len(out)} lines')
   if ascii_break:
     print(f'info: fixing ascii_break at image row {ascii_break}')
-    out = out[ascii_break:260] + out[:ascii_break]
+    #marker = [[[255,0,0]] * WIDTH]
+    marker = []
+    out = out[ascii_break:260] + marker + out[:ascii_break]
   img = np.asarray(out, dtype=np.uint8)
   print(img.shape)
   im = Image.fromarray(img)#, mode='L')
