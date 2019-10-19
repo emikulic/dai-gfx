@@ -104,6 +104,31 @@ def get_line_len(not_unit_color, disp, res, data):
   print(data[-70:].hex())
   return None
 
+def unhex(lines):
+  """
+  Decode `lines` which is in UT hex dump format.
+  Return the binary data and the last address seen.
+  """
+  # Example line:
+  # 'BFF0 00 00 B8 36 00 00 AF 36 00 00 9F 36 00 00 80 36'
+  data = ''
+  last_addr = 0
+  for l in lines:
+    l = l.strip()  # Remove newline.
+    if not valid_dump_line(l):
+      print('ignoring line', repr(l))
+      continue
+    l = l.split(' ')
+    addr = l.pop(0)
+    assert len(addr) == 4, addr
+    if addr[-1] == '0':
+      # Expect a full line (16 bytes).
+      assert len(l) == 16, l
+    last_addr = int(addr, 16) + len(l) - 1
+    data += ''.join(l)
+  data = bytes.fromhex(data)
+  return (data, last_addr)
+
 def main():
   p = argparse.ArgumentParser()
   p.add_argument('infile')
@@ -123,33 +148,15 @@ def main():
 
   fn = args.infile
   print('info: loading hex from {fn}')
-  f = open(fn)
-  lines = f.readlines()
-  f.close()
+  with open(fn) as f:
+    lines = f.readlines()
 
-  # Example line:
-  # 'BFF0 00 00 B8 36 00 00 AF 36 00 00 9F 36 00 00 80 36'
-  data = ''
-  last_addr = 0
-  for l in lines:
-    l = l.strip()  # Remove newline.
-    if not valid_dump_line(l):
-      print('ignoring line', repr(l))
-      continue
-    l = l.split(' ')
-    addr = l.pop(0)
-    assert len(addr) == 4, addr
-    if addr[-1] == '0':
-      # Expect a full line (16 bytes).
-      assert len(l) == 16, l
-    last_addr = int(addr, 16) + len(l) - 1
-    data += ''.join(l)
+  data, last_addr = unhex(lines)
+  print(f'info: loaded {len(data)} hex bytes')
   exp_last = 0xBFFF
   if last_addr != exp_last:
     print(f'WARN: last seen line starts at addr {last_addr:04x}, '
         f'expecting {exp_last:04x}')
-  data = bytes.fromhex(data)
-  print(f'info: loaded {len(data)} hex bytes')
 
   # Write binary data to file.
   binfn = fn + '.bin'
