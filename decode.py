@@ -133,41 +133,12 @@ def unhex(lines):
   data = bytes.fromhex(data)
   return (data, last_addr)
 
-def main():
-  p = argparse.ArgumentParser()
-  p.add_argument('infile')
-  p.add_argument('-pal', default='mame',
-      help='palette choice: mame|adjust')
-  args = p.parse_args()
-  if args.pal == 'mame':
-    pal = PALETTE16
-  elif args.pal == 'adjust':
-    pal = adjust_pal(PALETTE16)
-  else:
-    assert False, ('unknown palette', args.pal)
-
-  fn = args.infile
-  print('info: loading hex from {fn}')
-  with open(fn) as f:
-    lines = f.readlines()
-
-  data, last_addr = unhex(lines)
-  print(f'info: loaded {len(data)} hex bytes')
-  exp_last = 0xBFFF
-  if last_addr != exp_last:
-    print(f'WARN: last seen line starts at addr {last_addr:04x}, '
-        f'expecting {exp_last:04x}')
-
-  binfn = fn + '.bin'
-  print(f'info: writing binary data to {binfn}')
-  f = open(binfn, 'wb')
-  f.write(data)
-  f.close()
-
-  print('info: decoding lines')
-  addr = last_addr
+def decode(data, addr = 0xBFFF):
+  """
+  Decode `data` into an array of color numbers.
+  `addr` is the addr of the last seen byte, if known.
+  """
   out = []
-  out_gray = []
   ascii_break = None
   line_num = 0
   prev_bg = 0  # Used in 16 color gfx mode.
@@ -286,16 +257,49 @@ def main():
     if len(out) >= 260:
       print('info: giving up after a full screen')
       break
-
   print(f'info: decoded {len(out)} lines')
+
   if ascii_break:
     print(f'info: fixing ascii_break at image row {ascii_break}')
     #marker = [[[255,0,0]] * WIDTH]
     marker = []
     out = out[ascii_break:260] + marker + out[:ascii_break]
+  return np.asarray(out)
+
+def main():
+  p = argparse.ArgumentParser()
+  p.add_argument('infile')
+  p.add_argument('-pal', default='mame',
+      help='palette choice: mame|adjust')
+  args = p.parse_args()
+  if args.pal == 'mame':
+    pal = PALETTE16
+  elif args.pal == 'adjust':
+    pal = adjust_pal(PALETTE16)
+  else:
+    assert False, ('unknown palette', args.pal)
+
+  fn = args.infile
+  print(f'info: loading hex from {fn}')
+  with open(fn) as f:
+    lines = f.readlines()
+
+  data, last_addr = unhex(lines)
+  print(f'info: loaded {len(data)} hex bytes')
+  exp_last = 0xBFFF
+  if last_addr != exp_last:
+    print(f'WARN: last seen line starts at addr {last_addr:04x}, '
+        f'expecting {exp_last:04x}')
+
+  binfn = fn + '.bin'
+  print(f'info: writing binary data to {binfn}')
+  f = open(binfn, 'wb')
+  f.write(data)
+  f.close()
+
+  out = decode(data, last_addr)
 
   # Apply palette.
-  out = np.asarray(out)
   pal = np.asarray(pal, dtype=np.uint8)
   img = pal[out]
   h,w,c = img.shape
