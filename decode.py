@@ -280,12 +280,16 @@ def main():
     assert False, ('unknown palette', args.pal)
 
   fn = args.infile
-  print(f'info: loading hex from {fn}')
-  with open(fn) as f:
-    lines = f.readlines()
+  print(f'info: loading from {fn}')
+  with open(fn, 'rb') as f:
+    data = f.read()
 
-  data, last_addr = unhex(lines)
-  print(f'info: loaded {len(data)} hex bytes')
+  if not fn.lower().endswith('.bin'):
+    data, last_addr = unhex(data.splitlines())
+  else:
+    last_addr = 0xBFFF  # Assume.
+
+  print(f'info: loaded {len(data)} bytes')
   exp_last = 0xBFFF
   if last_addr != exp_last:
     print(f'WARN: last seen line starts at addr {last_addr:04x}, '
