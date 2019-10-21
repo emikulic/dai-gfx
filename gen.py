@@ -49,9 +49,26 @@ def main():
   w,h = img.size
   print(f'info: loaded {w} x {h} image')
 
-  # TODO: keep aspect
-  img = img.resize((WIDTH, HEIGHT), Image.BICUBIC)
-  img = np.asarray(img)
+  if (w,h) != (WIDTH, HEIGHT):
+    # Need to resize image.
+    if w / h > WIDTH / HEIGHT:
+      s = WIDTH / w
+    else:
+      s = HEIGHT / h
+    w = int(w * s + .5)
+    h = int(h * s + .5)
+    print(f'warn: scaling image to {w} x {h}')
+    assert w <= WIDTH, w
+    assert h <= HEIGHT, h
+    img = img.resize((w, h), Image.BICUBIC)
+    # Center.
+    xo = (WIDTH - w) // 2
+    yo = (HEIGHT - h) // 2
+    mid = np.asarray(img)
+    img = np.zeros((HEIGHT, WIDTH, 3), dtype=np.uint8)
+    img[yo:yo+h, xo:xo+w, :] = mid
+  else:
+    img = np.asarray(img)
 
   out = encode(img)
   print(f'encoded {len(out)} bytes (0x{len(out):x})')
