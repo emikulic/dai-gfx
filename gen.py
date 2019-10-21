@@ -6,19 +6,31 @@ import decode
 
 WIDTH, HEIGHT = 352, 256
 
+CONTROL_16COL_GFX = 0x80
+CONTROL_352_COLS = 0x20
+
+NOT_UNIT_COLOR = 0x40
+
 def encode(img):
+  control_byte = CONTROL_16COL_GFX | CONTROL_352_COLS
+  color_byte = NOT_UNIT_COLOR
+
+  # This bit pattern selects the color for every block of 8 pixels.
+  # 1 = fg color, 0 = bg color
+  pattern = 0b11111111
+
   # Set color registers. Not really important.
   out = bytes.fromhex('00 00 B5 36 00 00 AF 36 00 00 90 36 00 00 88 36')
 
   for y in range(HEIGHT):
-    # 16 color gfx, 352 cols
-    line = [0xA0, 0x40]
+    line = [control_byte, color_byte]
     sz = 8
     for x in range(0, WIDTH, sz):
       pixels = img[y, x:x+sz,:]
       gray = np.mean(pixels)
-      gray = int(gray / 17 + .5)
-      line += [0xff, gray << 4]
+      fg = int(gray / 17 + .5)
+      bg = 0
+      line += [pattern, (fg << 4) | bg]
     # Assemble line, reverse it, add it to output.
     line = bytes(line[::-1])
     out = line + out
