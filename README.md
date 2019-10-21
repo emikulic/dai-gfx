@@ -10,3 +10,9 @@ Quickstart:
 This will produce:
  * `monalisa.txt.png` - image decoded from hex data
  * `monalisa.txt.bin` - unhexed (binary) data
+
+The generator script can be used to produce binary data from an image file.
+e.g.:
+```shell
+./gen.py photo.jpg photo.bin
+```

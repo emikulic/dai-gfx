@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+"""
+Decode DAI framebuffer data into an image file.
+"""
 import argparse
 import numpy as np
 from PIL import Image  # pip3 install pillow

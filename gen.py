@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
+"""
+Generate DAI framebuffer data from an image file.
+"""
 import argparse
 import numpy as np
 from PIL import Image  # pip3 install pillow
-import decode
 
 WIDTH, HEIGHT = 352, 256
 
@@ -32,7 +34,8 @@ def encode(img):
       fg = int(np.mean(fg) / 17 + .5)
       bg = int(np.mean(bg) / 17 + .5)
       line += [pattern, (fg << 4) | bg]
-    # Assemble line, reverse it, add it to output.
+    # Assemble line, reverse it, prepend it to output.
+    # (the framebuffer is stored backwards)
     line = bytes(line[::-1])
     out = line + out
   return out
