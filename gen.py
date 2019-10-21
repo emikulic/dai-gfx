@@ -14,6 +14,9 @@ CONTROL_352_COLS = 0x20
 NOT_UNIT_COLOR = 0x40
 
 def encode(img):
+  """
+  Encodes image, returns an array of per-line memory chunks, in forward order.
+  """
   control_byte = CONTROL_16COL_GFX | CONTROL_352_COLS
   color_byte = NOT_UNIT_COLOR
 
@@ -22,7 +25,12 @@ def encode(img):
   pattern = 0b11110000
 
   # Set color registers. Not really important.
-  out = bytes.fromhex('00 00 B5 36 00 00 AF 36 00 00 90 36 00 00 88 36')
+  out = [
+      bytes([0x36, 0x88, 0, 0]),
+      bytes([0x36, 0x90, 0, 0]),
+      bytes([0x36, 0xAF, 0, 0]),
+      bytes([0x36, 0xB5, 0, 0]),
+  ]
 
   for y in range(HEIGHT):
     line = [control_byte, color_byte]
@@ -34,16 +42,18 @@ def encode(img):
       fg = int(np.mean(fg) / 17 + .5)
       bg = int(np.mean(bg) / 17 + .5)
       line += [pattern, (fg << 4) | bg]
-    # Assemble line, reverse it, prepend it to output.
-    # (the framebuffer is stored backwards)
-    line = bytes(line[::-1])
-    out = line + out
+    out.append(bytes(line))
   return out
+
+def add_text(lst):
+  """Unimplemented."""
+  return lst
 
 def main():
   p = argparse.ArgumentParser()
   p.add_argument('infile')
   p.add_argument('outfile')
+  p.add_argument('-text', default=True, type=bool)
   args = p.parse_args()
 
   fn = args.infile
@@ -74,6 +84,13 @@ def main():
     img = np.asarray(img)
 
   out = encode(img)
+  if args.text:
+    out = add_text(out)
+
+  # Join into one run.
+  out = b''.join(out)
+  # The framebuffer is in reverse order.
+  out = out[::-1]
   print(f'encoded {len(out)} bytes (0x{len(out):x})')
 
   outfn = args.outfile
