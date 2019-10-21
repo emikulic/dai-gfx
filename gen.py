@@ -91,6 +91,7 @@ def main():
   img = Image.open(fn)
   w,h = img.size
   print(f'info: loaded {w} x {h} image')
+  img = img.convert(mode='RGB')
 
   if (w,h) != (WIDTH, HEIGHT):
     # Need to resize image.
