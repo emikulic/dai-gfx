@@ -51,9 +51,33 @@ def encode(img):
     out.append(bytes(line))
   return out
 
+def text(t):
+  """
+  Encodes text into a memory chunk.
+  """
+  t = '    ' + t + ' ' * 66
+  t = t[:66].encode()
+  t = b''.join([bytes([c, 0]) for c in t])
+  return bytes([0x7a, 0x40]) + t
+
 def add_text(lst):
-  """Unimplemented."""
-  return lst
+  """
+  Add text section to encoder output.
+  """
+  color_regs = lst[:4]
+  top = lst[4:4+44]
+  bottom = lst[4+44:]
+
+  return (
+      color_regs +
+      bottom +
+      colort(8, 0, 0, 8, line_rep=0) +
+      [text('line1') +
+      text('line2') +
+      text('line3') +
+      text('line4')] +
+      colort(8, 0, 0, 8, line_rep=15) +
+      top)
 
 def main():
   p = argparse.ArgumentParser()
