@@ -288,6 +288,7 @@ def main():
     data = f.read()
 
   if not fn.lower().endswith('.bin'):
+    data = data.decode('ascii')
     data, last_addr = unhex(data.splitlines())
   else:
     last_addr = 0xBFFF  # Assume.
