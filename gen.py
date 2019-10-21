@@ -9,9 +9,22 @@ from PIL import Image  # pip3 install pillow
 WIDTH, HEIGHT = 352, 256
 
 CONTROL_16COL_GFX = 0x80
+CONTROL_TEXT_MODE = 0x30
 CONTROL_352_COLS = 0x20
 
 NOT_UNIT_COLOR = 0x40
+
+def colort(c1, c2, c3, c4, line_rep = 6):
+  """
+  Emit list of color change instructions.
+  """
+  control = CONTROL_TEXT_MODE | line_rep
+  return [
+      bytes([control, 0x80 | c1, 0, 0]),
+      bytes([control, 0x90 | c2, 0, 0]),
+      bytes([control, 0xA0 | c3, 0, 0]),
+      bytes([control, 0xB0 | c4, 0, 0]),
+  ]
 
 def encode(img):
   """
@@ -24,14 +37,7 @@ def encode(img):
   # 1 = fg color, 0 = bg color
   pattern = 0b11110000
 
-  # Set color registers. Not really important.
-  out = [
-      bytes([0x36, 0x88, 0, 0]),
-      bytes([0x36, 0x90, 0, 0]),
-      bytes([0x36, 0xAF, 0, 0]),
-      bytes([0x36, 0xB5, 0, 0]),
-  ]
-
+  out = []
   for y in range(HEIGHT):
     line = [control_byte, color_byte]
     sz = 8
@@ -83,7 +89,7 @@ def main():
   else:
     img = np.asarray(img)
 
-  out = encode(img)
+  out = colort(8, 0, 15, 5) + encode(img)
   if args.text:
     out = add_text(out)
 
