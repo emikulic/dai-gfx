@@ -17,7 +17,7 @@ def encode(img):
 
   # This bit pattern selects the color for every block of 8 pixels.
   # 1 = fg color, 0 = bg color
-  pattern = 0b11111111
+  pattern = 0b11110000
 
   # Set color registers. Not really important.
   out = bytes.fromhex('00 00 B5 36 00 00 AF 36 00 00 90 36 00 00 88 36')
@@ -26,10 +26,11 @@ def encode(img):
     line = [control_byte, color_byte]
     sz = 8
     for x in range(0, WIDTH, sz):
-      pixels = img[y, x:x+sz,:]
-      gray = np.mean(pixels)
-      fg = int(gray / 17 + .5)
-      bg = 0
+      # Use fg color on the left and bg color on the right.
+      fg = img[y, x:x+sz//2,:]
+      bg = img[y, x+sz//2:x+sz,:]
+      fg = int(np.mean(fg) / 17 + .5)
+      bg = int(np.mean(bg) / 17 + .5)
       line += [pattern, (fg << 4) | bg]
     # Assemble line, reverse it, add it to output.
     line = bytes(line[::-1])
