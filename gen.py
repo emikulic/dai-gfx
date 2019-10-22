@@ -5,10 +5,13 @@ Generate DAI framebuffer data from an image file.
 import argparse
 import numpy as np
 from PIL import Image  # pip3 install pillow
+import decode
 
 WIDTH, HEIGHT = 352, 256
 
 CONTROL_16COL_GFX = 0x80
+CONTROL_4COL_GFX = 0x0
+
 CONTROL_TEXT_MODE = 0x30
 CONTROL_352_COLS = 0x20
 
@@ -82,9 +85,50 @@ def encode16(img):
   return out
 
 def encode4(img):
-  if img.mode != 'P':
-    print(f'warn: expecting indexed color, got mode {img.mode}')
-  pass
+  assert img.mode == 'P', ('expecting indexed color, got ', img.mode)
+  pmode, pdata = img.palette.getdata()
+  assert len(pdata) % 3 == 0, len(pdata)
+  ncol = len(pdata) // 3
+  print(f'info: palette has {ncol} colors')
+  assert ncol <= 4, ('expecting <= 4 colors, got', ncol)
+
+  # Find nearest colors.
+  dai_colors = [0,0,0,0]
+  pal = np.asarray(decode.PALETTE16)
+  for i in range(ncol):
+    r,g,b = pdata[i*3:i*3+3]
+    best_idx = 0
+    best_dist = None
+    rgb = np.asarray([r,g,b])
+    for col in range(16):
+      dist = rgb - pal[col]
+      dist = np.mean(dist * dist)
+      if best_dist is None or dist < best_dist:
+        best_idx = col
+        best_dist = dist
+    print(f'info: mapped image color {i} (rgb {r:3} {g:3} {b:3}) '
+        f'to dai color {best_idx:2}')
+    dai_colors[i] = best_idx
+  out = colort(*dai_colors)
+
+  control_byte = CONTROL_4COL_GFX | CONTROL_352_COLS
+  color_byte = NOT_UNIT_COLOR
+
+  img = np.asarray(img)
+  for y in range(HEIGHT):
+    line = [control_byte, color_byte]
+    sz = 8
+    for x in range(0, WIDTH, sz):
+      lb = 0
+      hb = 0
+      for i in range(sz):
+        col = img[y, x + i]
+        if col & 1: lb |= 1 << (7 - i)
+        if col & 2: hb |= 1 << (7 - i)
+      # Reverse order because it'll be reversed later.
+      line += [hb, lb]
+    out.append(bytes(line))
+  return out
 
 def encode_text(t):
   """
@@ -135,7 +179,7 @@ def main():
   w,h = img.size
   print(f'info: loaded {w} x {h} image')
 
-  out = encode16(img)
+  out = encode4(img)
   out = insert_text(out, text, args.infile, 'MODE 5A')
 
   # Join into one run.
