@@ -51,16 +51,18 @@ def encode(img):
     out.append(bytes(line))
   return out
 
-def text(t):
+def encode_text(t):
   """
-  Encodes text into a memory chunk.
+  Returns a memory chunk (in forward order) encoding a line of text.
+  If the line is too long, it gets truncated.
   """
+  if type(t) is bytes: t = str(t)
   t = '    ' + t + ' ' * 66
   t = t[:66].encode()
   t = b''.join([bytes([c, 0]) for c in t])
   return bytes([0x7a, 0x40]) + t
 
-def add_text(lst):
+def insert_text(lst, text, fn, mode):
   """
   Add text section to encoder output.
   """
@@ -68,14 +70,14 @@ def add_text(lst):
   top = lst[4:4+44]
   bottom = lst[4+44:]
 
+  text += [f'{fn} {mode}', '', '', '']
+  text = text[:4]
+
   return (
       color_regs +
       bottom +
       colort(8, 0, 0, 8, line_rep=0) +
-      [text('line1') +
-      text('line2') +
-      text('line3') +
-      text('line4')] +
+      list(map(encode_text, text)) +
       colort(8, 0, 0, 8, line_rep=15) +
       top)
 
@@ -83,8 +85,14 @@ def main():
   p = argparse.ArgumentParser()
   p.add_argument('infile')
   p.add_argument('outfile')
-  p.add_argument('-text', default=True, type=bool)
+  p.add_argument('-text', default=None, type=str,
+    help='file to load text insert from')
   args = p.parse_args()
+
+  text = []
+  if args.text is not None:
+    with open(args.text) as f:
+      text = f.read().splitlines()
 
   fn = args.infile
   print(f'info: loading from {fn}')
@@ -115,8 +123,7 @@ def main():
     img = np.asarray(img)
 
   out = colort(8, 0, 15, 5) + encode(img)
-  if args.text:
-    out = add_text(out)
+  out = insert_text(out, text, args.infile, 'MODE 5A')
 
   # Join into one run.
   out = b''.join(out)
