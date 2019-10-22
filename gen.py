@@ -26,10 +26,40 @@ def colort(c1, c2, c3, c4, line_rep = 6):
       bytes([control, 0xB0 | c4, 0, 0]),
   ]
 
+def rightsize(img):
+  w,h = img.size
+  if (w,h) != (WIDTH, HEIGHT):
+    # Resize image but maintain aspect.
+    if w / h > WIDTH / HEIGHT:
+      s = WIDTH / w
+    else:
+      s = HEIGHT / h
+    w = int(w * s + .5)
+    h = int(h * s + .5)
+    print(f'warn: scaling image to {w} x {h}')
+    assert w <= WIDTH, w
+    assert h <= HEIGHT, h
+    img = img.resize((w, h), Image.BICUBIC)
+  return np.asarray(img)
+
+def center(img):
+  h,w,c = img.shape
+  if (w,h) != (WIDTH, HEIGHT):
+    # Center image.
+    xo = (WIDTH - w) // 2
+    yo = (HEIGHT - h) // 2
+    mid = np.asarray(img)
+    img = np.zeros((HEIGHT, WIDTH, c), dtype=np.uint8)
+    img[yo:yo+h, xo:xo+w, :] = mid
+  return img
+
 def encode16(img):
   """
   Encodes image, returns an array of per-line memory chunks, in forward order.
   """
+  img = img.convert(mode='RGB')
+  img = center(rightsize(img))
+
   control_byte = CONTROL_16COL_GFX | CONTROL_352_COLS
   color_byte = NOT_UNIT_COLOR
 
@@ -104,29 +134,6 @@ def main():
   img = Image.open(fn)
   w,h = img.size
   print(f'info: loaded {w} x {h} image')
-  img = img.convert(mode='RGB')
-
-  if (w,h) != (WIDTH, HEIGHT):
-    # Resize image but maintain aspect.
-    if w / h > WIDTH / HEIGHT:
-      s = WIDTH / w
-    else:
-      s = HEIGHT / h
-    w = int(w * s + .5)
-    h = int(h * s + .5)
-    print(f'warn: scaling image to {w} x {h}')
-    assert w <= WIDTH, w
-    assert h <= HEIGHT, h
-    img = img.resize((w, h), Image.BICUBIC)
-  img = np.asarray(img)
-
-  if (w,h) != (WIDTH, HEIGHT):
-    # Center image.
-    xo = (WIDTH - w) // 2
-    yo = (HEIGHT - h) // 2
-    mid = np.asarray(img)
-    img = np.zeros((HEIGHT, WIDTH, 3), dtype=np.uint8)
-    img[yo:yo+h, xo:xo+w, :] = mid
 
   out = encode16(img)
   out = insert_text(out, text, args.infile, 'MODE 5A')
