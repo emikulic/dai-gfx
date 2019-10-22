@@ -26,7 +26,7 @@ def colort(c1, c2, c3, c4, line_rep = 6):
       bytes([control, 0xB0 | c4, 0, 0]),
   ]
 
-def encode(img):
+def encode16(img):
   """
   Encodes image, returns an array of per-line memory chunks, in forward order.
   """
@@ -37,7 +37,7 @@ def encode(img):
   # 1 = fg color, 0 = bg color
   pattern = 0b11110000
 
-  out = []
+  out = colort(8, 0, 15, 5)
   for y in range(HEIGHT):
     line = [control_byte, color_byte]
     sz = 8
@@ -50,6 +50,11 @@ def encode(img):
       line += [pattern, (fg << 4) | bg]
     out.append(bytes(line))
   return out
+
+def encode4(img):
+  if img.mode != 'P':
+    print(f'warn: expecting indexed color, got mode {img.mode}')
+  pass
 
 def encode_text(t):
   """
@@ -102,7 +107,7 @@ def main():
   img = img.convert(mode='RGB')
 
   if (w,h) != (WIDTH, HEIGHT):
-    # Need to resize image.
+    # Resize image but maintain aspect.
     if w / h > WIDTH / HEIGHT:
       s = WIDTH / w
     else:
@@ -113,16 +118,17 @@ def main():
     assert w <= WIDTH, w
     assert h <= HEIGHT, h
     img = img.resize((w, h), Image.BICUBIC)
-    # Center.
+  img = np.asarray(img)
+
+  if (w,h) != (WIDTH, HEIGHT):
+    # Center image.
     xo = (WIDTH - w) // 2
     yo = (HEIGHT - h) // 2
     mid = np.asarray(img)
     img = np.zeros((HEIGHT, WIDTH, 3), dtype=np.uint8)
     img[yo:yo+h, xo:xo+w, :] = mid
-  else:
-    img = np.asarray(img)
 
-  out = colort(8, 0, 15, 5) + encode(img)
+  out = encode16(img)
   out = insert_text(out, text, args.infile, 'MODE 5A')
 
   # Join into one run.
