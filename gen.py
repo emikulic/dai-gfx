@@ -82,7 +82,7 @@ def encode16(img):
       bg = int(np.mean(bg) / 17 + .5)
       line += [pattern, (fg << 4) | bg]
     out.append(bytes(line))
-  return out
+  return 'MODE 5A', out
 
 def encode4(img):
   assert img.mode == 'P', ('expecting indexed color, got ', img.mode)
@@ -128,7 +128,7 @@ def encode4(img):
       # Reverse order because it'll be reversed later.
       line += [hb, lb]
     out.append(bytes(line))
-  return out
+  return 'MODE 6A', out
 
 def encode_text(t):
   """
@@ -161,11 +161,17 @@ def insert_text(lst, text, fn, mode):
       top)
 
 def main():
+  encoders = {
+      '16gray': encode16,
+      '4color': encode4,
+  }
   p = argparse.ArgumentParser()
   p.add_argument('infile')
   p.add_argument('outfile')
   p.add_argument('-text', default=None, type=str,
-    help='file to load text insert from')
+      help='name of file to load the text insert from')
+  p.add_argument('-mode', default='16gray', type=str,
+      help=f'encoder mode, options are {encoders.keys()}')
   args = p.parse_args()
 
   text = []
@@ -179,8 +185,8 @@ def main():
   w,h = img.size
   print(f'info: loaded {w} x {h} image')
 
-  out = encode4(img)
-  out = insert_text(out, text, args.infile, 'MODE 5A')
+  mode, out = encoders[args.mode](img)
+  out = insert_text(out, text, args.infile, mode)
 
   # Join into one run.
   out = b''.join(out)
