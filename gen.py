@@ -192,7 +192,10 @@ def main():
   out = b''.join(out)
   # The framebuffer is in reverse order.
   out = out[::-1]
-  print(f'encoded {len(out)} bytes (0x{len(out):x})')
+  print(f'encoded {len(out)} bytes')
+
+  addr = 0xc000 - len(out)
+  print(f'load at address 0x{addr:04x}')
 
   outfn = args.outfile
   with open(outfn, 'wb') as f:
