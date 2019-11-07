@@ -5,6 +5,7 @@ Decode DAI framebuffer data into an image file.
 import argparse
 import numpy as np
 from PIL import Image  # pip3 install pillow
+from unhex import unhex
 
 WIDTH = 352
 
@@ -74,14 +75,6 @@ def cut(b, l):
 
 assert cut(b'hello', 3) == (b'he', b'llo')
 
-def valid_dump_line(l):
-  """Returns True if `l` looks like a valid UT hex dump line."""
-  if len(l) < 5: return False
-  if l[4] != ' ': return False
-  for i in range(4):
-    if l[i] not in '0123456789ABCDEF': return False
-  return True
-
 def cols_from_res(res):
   """Returns the number of columns based on the resolution number."""
   # 528 cols is also 66 chars per line in character mode.
@@ -110,31 +103,6 @@ def get_line_len(not_unit_color, disp, res, data):
   print('Unknown mode, trailing data is:')
   print(data[-70:].hex())
   return None
-
-def unhex(lines):
-  """
-  Decode `lines` which is in UT hex dump format.
-  Return the binary data and the last address seen.
-  """
-  # Example line:
-  # 'BFF0 00 00 B8 36 00 00 AF 36 00 00 9F 36 00 00 80 36'
-  data = ''
-  last_addr = 0
-  for l in lines:
-    l = l.strip()  # Remove newline.
-    if not valid_dump_line(l):
-      print('ignoring line', repr(l))
-      continue
-    l = l.split(' ')
-    addr = l.pop(0)
-    assert len(addr) == 4, addr
-    if addr[-1] == '0':
-      # Expect a full line (16 bytes).
-      assert len(l) == 16, l
-    last_addr = int(addr, 16) + len(l) - 1
-    data += ''.join(l)
-  data = bytes.fromhex(data)
-  return (data, last_addr)
 
 def decode(data, addr = 0xBFFF):
   """
@@ -301,9 +269,8 @@ def main():
 
   binfn = fn + '.bin'
   print(f'info: writing binary data to {binfn}')
-  f = open(binfn, 'wb')
-  f.write(data)
-  f.close()
+  with open(binfn, 'wb') as f:
+    f.write(data)
 
   out = decode(data, last_addr)
 
