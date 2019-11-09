@@ -29,9 +29,6 @@ def unhex(lines):
     l = l.split(' ')
     addr = l.pop(0)
     assert len(addr) == 4, addr
-    if addr[-1] == '0':
-      # Expect a full line (16 bytes).
-      assert len(l) == 16, l
     last_addr = int(addr, 16) + len(l) - 1
     data += ''.join(l)
   data = bytes.fromhex(data)
